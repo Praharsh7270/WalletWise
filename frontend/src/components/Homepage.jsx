@@ -84,7 +84,7 @@ const Homepage = () => {
           <nav className={`ww-nav-links ${isMenuOpen ? "is-open" : ""}`}>
             <button onClick={() => smoothScroll("about")}>About</button>
             <button onClick={() => smoothScroll("features")}>Features</button>
-            <button className="ww-btn ww-btn-primary" onClick={() => navigate("/signup")}>
+            <button className="ww-btn ww-btn-primary text-zinc-950 bg-black" onClick={() => navigate("/signup")}>
               Get Started
             </button>
           </nav>
@@ -145,7 +145,7 @@ const Homepage = () => {
               <div className="ww-dashboard-mock">
                 <div className="ww-mock-header">
                   <div>
-                    <p className="ww-mock-title">WalletWise Overview</p>
+                    <p className="text-black">WalletWise Overview</p>
                     <p className="ww-mock-sub">Week 4 • Campus term</p>
                   </div>
                   <span className="ww-badge">
