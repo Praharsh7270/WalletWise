@@ -1,17 +1,19 @@
 const express = require('express');
 const router = express.Router();
-
 const { protect } = require('../middleware/auth');
 const validate = require('../middleware/validate');
 const { transactionSchema } = require('../utils/validationSchemas');
+
+// Import the controller object
 const transactionController = require('../controllers/transactionController');
 
-// Add transaction (both income and expense)
+// Add transaction 
 router.post('/', protect, validate(transactionSchema), transactionController.addTransaction);
 
 // Get all transactions
 router.get('/', protect, transactionController.getAllTransactions);
 
+<<<<<<< Updated upstream
 // Update transaction
 router.put('/:id', protect, transactionController.updateTransaction);
 
@@ -19,3 +21,6 @@ router.put('/:id', protect, transactionController.updateTransaction);
 router.delete('/:id', protect, transactionController.deleteTransaction);
 
 module.exports = router;
+=======
+module.exports = router;
+>>>>>>> Stashed changes

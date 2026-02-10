@@ -18,6 +18,7 @@ import {
   PieChart,
 } from "lucide-react";
 import "./Homepage.css";
+import Navbar from '../components/Navbar';
 
 const Homepage = () => {
   const navigate = useNavigate();
@@ -78,43 +79,7 @@ const Homepage = () => {
 
   return (
     <div className="ww-page">
-      {/* Header */}
-      <header className={`ww-header ${scrolled ? "scrolled" : ""}`}>
-        <div className="ww-container ww-nav">
-          <div className="ww-brand" onClick={() => smoothScroll("top")}>
-            <div className="ww-logo-icon">
-              <Wallet size={20} />
-            </div>
-            <span className="ww-logo-text">WalletWise</span>
-          </div>
-
-          <nav className={`ww-nav-links ${isMenuOpen ? "is-open" : ""}`}>
-            <button onClick={() => smoothScroll("about")}>About</button>
-            <button onClick={() => smoothScroll("features")}>Features</button>
-            <button onClick={() => smoothScroll("how")}>How it Works</button>
-            <button onClick={() => smoothScroll("testimonials")}>Stories</button>
-          </nav>
-
-          <div className="ww-nav-actions">
-            <button className="ww-btn-link" onClick={() => navigate("/login")}>
-              Log in
-            </button>
-            <button
-              className="ww-btn ww-btn-primary text-zinc-950 bg-black"
-              onClick={() => navigate("/signup")}
-            >
-              Get Started
-            </button>
-            <button
-              className="ww-menu-toggle"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              <span />
-              <span />
-            </button>
-          </div>
-        </div>
-      </header>
+      <Navbar isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} smoothScroll={smoothScroll} navigate={navigate} />
 
       <main id="top">
         {/* --- HERO SECTION --- */}
@@ -186,33 +151,51 @@ const Homepage = () => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
             >
-              <div className="ww-dashboard-mock">
-                <div className="ww-mock-header">
-                  <div>
-                    <p className="text-black">WalletWise Overview</p>
-                    <p className="ww-mock-sub">Week 4 • Campus term</p>
-                  </div>
-                  <div className="ww-mock-content">
-                    <div className="ww-mock-grid">
-                      <div className="ww-mock-cell">
-                        <div className="ww-mock-icon"><Wallet size={24} /></div>
-                        <div className="ww-mock-label">Budget</div>
-                      </div>
-                      <div className="ww-mock-cell">
-                        <div className="ww-mock-icon"><BarChart3 size={24} /></div>
-                        <div className="ww-mock-label">Expenses</div>
-                      </div>
-                      <div className="ww-mock-cell">
-                        <div className="ww-mock-icon"><Target size={24} /></div>
-                        <div className="ww-mock-label">Goals</div>
-                      </div>
-                      <div className="ww-mock-cell">
-                        <div className="ww-mock-icon"><LineChart size={24} /></div>
-                        <div className="ww-mock-label">Reports</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              <div className="ww-main-image-wrapper">
+                {/* Vector Doodle SVG */}
+                <svg
+                  className="ww-main-img vector-doodle"
+                  viewBox="0 0 600 450"
+                  fill="none"
+                  role="img"
+                >
+                  <defs>
+                    <linearGradient id="doodle-grad-orange" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style={{ stopColor: "#FB923C", stopOpacity: 0.1 }} />
+                      <stop offset="100%" style={{ stopColor: "#F59E0B", stopOpacity: 0.05 }} />
+                    </linearGradient>
+                    <linearGradient id="doodle-grad-green" x1="0%" y1="100%" x2="100%" y2="0%">
+                      <stop offset="0%" style={{ stopColor: "#10B981", stopOpacity: 0.1 }} />
+                      <stop offset="100%" style={{ stopColor: "#34D399", stopOpacity: 0.05 }} />
+                    </linearGradient>
+                  </defs>
+                  <path d="M480.5,189.5Q447,265,375,304Q303,343,223.5,313.5Q144,284,107.5,207.5Q71,131,154,88.5Q237,46,318.5,73.5Q400,101,457,132Q514,163,480.5,189.5Z" fill="url(#doodle-grad-orange)" transform="translate(50, 50) scale(0.9)" />
+                  <path d="M417.5,268Q364,358,263.5,343Q163,328,110.5,238Q58,148,158.5,97.5Q259,47,345,106.5Q431,166,417.5,268Z" fill="url(#doodle-grad-green)" transform="translate(-30, 80) scale(0.8)" />
+                  <g stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none">
+                    <rect x="150" y="120" width="300" height="200" rx="10" fill="white" strokeWidth="3" />
+                    <path d="M150 320 H 450 L 470 350 H 130 L 150 320 Z" fill="white" strokeWidth="3" />
+                    <path d="M180 250 L 230 200 L 270 230 L 350 150" stroke="#10B981" strokeWidth="3" />
+                    <circle cx="350" cy="150" r="5" fill="#10B981" stroke="none" />
+                    <rect x="180" y="270" width="60" height="10" rx="2" fill="#E5E7EB" stroke="none" />
+                    <rect x="250" y="270" width="40" height="10" rx="2" fill="#E5E7EB" stroke="none" />
+                    <g transform="translate(80, 100) rotate(-15)">
+                      <path d="M30 60 C 10 60, 10 10, 30 10 C 50 10, 50 0, 70 0 C 90 0, 90 10, 110 10 C 130 10, 130 60, 110 60 C 130 60, 130 110, 110 110 C 90 110, 90 120, 70 120 C 50 120, 50 110, 30 110 C 10 110, 10 60, 30 60 Z" fill="white" />
+                      <path d="M70 30 L 70 90 M 40 60 L 100 60" stroke="#FB923C" strokeWidth="4" />
+                      <circle cx="70" cy="60" r="25" stroke="#FB923C" strokeWidth="3" />
+                    </g>
+                    <g transform="translate(420, 280) rotate(10)">
+                      <path d="M80 40 Q 80 0, 40 0 Q 0 0, 0 40 Q 0 80, 40 80 Q 60 80, 70 70 L 80 80 L 90 70 L 80 60 Q 100 40, 80 40 Z" fill="white" />
+                      <rect x="35" y="10" width="10" height="5" fill="#374151" stroke="none" />
+                    </g>
+                    <g transform="translate(450, 80) rotate(5)">
+                      <rect x="0" y="20" width="60" height="15" rx="2" fill="white" />
+                      <rect x="5" y="5" width="50" height="15" rx="2" fill="white" />
+                    </g>
+                    <path d="M500 250 L 530 220 M 530 220 L 540 240 M 530 220 L 510 210" stroke="#10B981" strokeWidth="3" />
+                    <path d="M40 40 L 45 55 L 60 60 L 45 65 L 40 80 L 35 65 L 20 60 L 35 55 Z" fill="#F59E0B" stroke="none" />
+                    <path d="M550 350 L 555 365 L 570 370 L 555 375 L 550 390 L 545 375 L 530 370 L 545 365 Z" fill="#10B981" stroke="none" />
+                  </g>
+                </svg>
 
                 <motion.div
                   className="ww-float-card icon-card"
@@ -498,5 +481,13 @@ const Homepage = () => {
     </div>
   );
 };
+<p className="copy-year">© 2026 WalletWise.</p></div >
+          </div >
+        </div >
+      </footer >
+    </div >
+  );
+};
 
+export default Homepage;
 export default Homepage;
