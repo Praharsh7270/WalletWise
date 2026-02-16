@@ -14,6 +14,9 @@ dotenv.config();
 // Initialize Express app
 const app = express();
 
+// Enable trust proxy for correct rate limiting behind load balancers (Vercel, Heroku, AWS ELB)
+app.set('trust proxy', 1);
+
 // ==================== SECURITY HEADERS ====================
 app.use(helmet());
 
