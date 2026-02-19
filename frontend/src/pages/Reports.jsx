@@ -1,7 +1,10 @@
 import React, { useMemo, useRef, useState, useEffect, useCallback } from 'react';
 import { Pie, Bar, Line } from 'react-chartjs-2';
 import { Link } from 'react-router-dom';
-import AppNavbar from '../components/AppNavbar';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { FaDownload } from 'react-icons/fa';
+
 import {
   Chart as ChartJS,
   ArcElement,
@@ -39,7 +42,10 @@ const Reports = () => {
     trends: [],
     insights: [],
     topPlaces: [],
-    dailySpend: []
+    insights: [],
+    topPlaces: [],
+    dailySpend: [],
+    transactions: []
   });
 
   const formatCurrency = (amount) =>
@@ -216,7 +222,9 @@ const Reports = () => {
         trends,
         insights,
         topPlaces,
-        dailySpend
+        topPlaces,
+        dailySpend,
+        transactions: monthExpenses
       });
     } catch (err) {
       console.error('Reports fetch error:', err);
@@ -412,6 +420,94 @@ const Reports = () => {
       ? 'Loading latest insights...'
       : 'Quick, student-friendly views of where your money went.';
 
+  const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
+
+  const handleExportCSV = () => {
+    if (!reportData.transactions || reportData.transactions.length === 0) {
+      alert('No transactions to export for this month.');
+      return;
+    }
+
+    const headers = ['Date', 'Category', 'Description', 'Amount'];
+    const rows = reportData.transactions.map(t => [
+      new Date(t.date).toLocaleDateString(),
+      t.category || 'Other',
+      t.description || '',
+      t.amount
+    ]);
+
+    let csvContent = "data:text/csv;charset=utf-8,"
+      + headers.join(",") + "\n"
+      + rows.map(e => e.join(",")).join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `monthly_report_${new Date().getMonth() + 1}_${new Date().getFullYear()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setDownloadMenuOpen(false);
+  };
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text(`Financial Report - ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`, 14, 22);
+
+    doc.setFontSize(12);
+    doc.text(`Total Spent: ${formatCurrency(reportData.monthTotal)}`, 14, 32);
+
+    // Summary Table
+    const summaryData = [
+      ['Metric', 'Value'],
+      ['Total Spent', formatCurrency(reportData.monthTotal)],
+      ['Budget Used', `${totalPercent}%`],
+      ['Top Category', reportData.pieCategories[0]?.label || 'N/A']
+    ];
+
+    autoTable(doc, {
+      startY: 40,
+      head: [summaryData[0]],
+      body: summaryData.slice(1),
+      theme: 'grid',
+      headStyles: { fillColor: [37, 99, 235] }
+    });
+
+    // Category Breakdown
+    doc.text('Category Breakdown', 14, doc.lastAutoTable.finalY + 14);
+
+    const categoryData = reportData.pieCategories.map(c => [c.label, `${c.value}%`, formatCurrency(c.amount)]);
+
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 20,
+      head: [['Category', 'Percentage', 'Amount']],
+      body: categoryData,
+      theme: 'striped',
+      headStyles: { fillColor: [37, 99, 235] }
+    });
+
+    // Transactions List
+    doc.text('Transaction Details', 14, doc.lastAutoTable.finalY + 14);
+
+    const txRows = reportData.transactions.map(t => [
+      new Date(t.date).toLocaleDateString(),
+      t.category || 'Other',
+      t.description || '',
+      formatCurrency(t.amount)
+    ]);
+
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 20,
+      head: [['Date', 'Category', 'Description', 'Amount']],
+      body: txRows,
+      theme: 'striped'
+    });
+
+    doc.save(`monthly_report_${new Date().getMonth() + 1}_${new Date().getFullYear()}.pdf`);
+    setDownloadMenuOpen(false);
+  };
+
   return (
     <div className="reports-page">
       <header className="reports-header">
@@ -427,6 +523,22 @@ const Reports = () => {
           <p>{headerNote}</p>
         </div>
       </header>
+      <div className="reports-actions-bar">
+        <div className="download-menu-container">
+          <button
+            className="download-btn primary-button"
+            onClick={() => setDownloadMenuOpen(!downloadMenuOpen)}
+          >
+            <FaDownload /> Download Report
+          </button>
+          {downloadMenuOpen && (
+            <div className="download-dropdown">
+              <button onClick={handleExportCSV}>Export as CSV</button>
+              <button onClick={handleExportPDF}>Export as PDF</button>
+            </div>
+          )}
+        </div>
+      </div>
 
       {(loading || error) && (
         <div className={`reports-status ${error ? 'error' : 'loading'}`}>

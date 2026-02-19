@@ -1,14 +1,25 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const cookieParser = require('cookie-parser');
-const dotenv = require('dotenv');
-const passport = require('passport');
-const { configurePassport } = require('./config/passport');
+﻿const express = require("express");
+const mongoose = require("mongoose");
+const cors = require("cors");
+const cookieParser = require("cookie-parser");
+const dotenv = require("dotenv");
+const passport = require("passport");
+const helmet = require("helmet");
+const { configurePassport } = require("./config/passport");
+const authRoutes = require("./routes/authRoutes");
+const oauthRoutes = require("./routes/oauthRoutes");
+const { protect } = require("./middleware/auth");
+const analyticsRoutes = require("./routes/analyticsRoutes");
 dotenv.config();
 
 // Initialize Express app
 const app = express();
+
+// Enable trust proxy for correct rate limiting behind load balancers (Vercel, Heroku, AWS ELB)
+app.set('trust proxy', 1);
+
+// ==================== SECURITY HEADERS ====================
+app.use(helmet());
 
 // ==================== ENHANCED ERROR LOGGING ====================
 process.on('uncaughtException', (error) => {
@@ -33,8 +44,14 @@ app.use(cors({
 }));
 
 // Body parsers
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '1mb' }));
+// Disable extended urlencoded to prevent naive form attacks, though the middleware below is the real fix
+app.use(express.urlencoded({ extended: false, limit: '1mb' }));
+
+// ==================== SECURITY MIDDLEWARE ====================
+const { enforceJsonContent } = require('./middleware/security');
+// Apply strict content-type enforcement to ALL API routes
+app.use('/api', enforceJsonContent);
 
 // Cookie parser
 app.use(cookieParser());
@@ -42,31 +59,51 @@ app.use(cookieParser());
 // Passport setup (Google OAuth)
 configurePassport();
 app.use(passport.initialize());
-
-// Request logging middleware
 app.use((req, res, next) => {
     const timestamp = new Date().toISOString();
     console.log(`\n═══════════════════════════════════════════════════`);
     console.log(`📨 ${timestamp} - ${req.method} ${req.originalUrl}`);
     console.log(`🌍 Origin: ${req.headers.origin || 'No origin'}`);
-    console.log(`🔑 Auth Header: ${req.headers.authorization || 'No auth header'}`);
-    console.log(`🍪 Cookies:`, req.cookies);
+
+    // Mask Auth Header in logs
+    const authHeader = req.headers.authorization;
+    if (authHeader) {
+        console.log(`🔑 Auth Header: ${authHeader.substring(0, 15)}...[REDACTED]`);
+    } else {
+        console.log(`🔑 Auth Header: No auth header`);
+    }
 
     if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
-        console.log(`📝 Request Body:`, JSON.stringify(req.body, null, 2));
+        // Create a safe copy of the body for logging
+        const safeBody = { ...req.body };
+        const sensitiveKeys = ['password', 'token', 'refreshToken', 'accessToken', 'client_secret', 'code'];
+
+        sensitiveKeys.forEach(key => {
+            if (safeBody[key]) safeBody[key] = '***[REDACTED]***';
+        });
+
+        console.log(`📝 Request Body:`, JSON.stringify(safeBody, null, 2));
     }
 
     next();
 });
 
-// ==================== RATE LIMITING ====================
-const { globalLimiter, authLimiter } = require('./middleware/rateLimiter');
+// ==================== RATE LIMITING & DDoS PROTECTION ====================
+const { totalTrafficLimiter, speedLimiter, globalLimiter, authLimiter } = require('./middleware/rateLimiter');
 
-// Apply global rate limiter to all requests
+// 1. Apply total traffic limiter (fuse) to ALL requests
+// This is the first line of defense against distributed attacks
+app.use(totalTrafficLimiter);
+
+// 2. Apply speed limiter to throttle high-frequency requesters
+app.use(speedLimiter);
+
+// 3. Apply standard IP-based global rate limiter
 app.use(globalLimiter);
 
-// Apply stricter rate limiter to auth routes
+// 4. Apply stricter rate limiter to auth routes
 app.use('/api/auth', authLimiter);
+app.use("/api/analytics", analyticsRoutes);
 
 
 // ==================== DATABASE CONNECTION ====================
@@ -95,12 +132,13 @@ mongoose.connect(MONGODB_URI, {
     });
 
 // ==================== ROUTE IMPORTS ====================
-const authRoutes = require('./routes/authRoutes');
-const oauthRoutes = require('./routes/oauthRoutes');
+// const authRoutes = require('./routes/authRoutes');
 const budgetRoutes = require('./routes/budgetRoutes');
 const savingGoalRoutes = require('./routes/savingGoalRoutes');
 const transactionRoutes = require('./routes/transactionRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const subscriptionRoutes = require('./routes/subscriptionRoutes');
+const insightsRoutes = require('./routes/insightsRoutes');
 
 // ==================== ROUTE MOUNTING ====================
 app.use('/api/auth', authRoutes);
@@ -109,6 +147,8 @@ app.use('/api/budget', budgetRoutes);
 app.use('/api/savings-goals', savingGoalRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/insights', insightsRoutes);
 
 // ==================== HEALTH CHECK ====================
 
@@ -145,6 +185,13 @@ app.get('/api/health', (req, res) => {
             },
             dashboard: {
                 summary: 'GET /api/dashboard/summary'
+            },
+            insights: {
+                anomalies: 'GET /api/insights/anomalies',
+                subscriptions_alerts: 'GET /api/insights/subscriptions/alerts',
+                seasonal: 'GET /api/insights/seasonal',
+                weekend_weekday: 'GET /api/insights/weekend-weekday',
+                summary: 'GET /api/insights/summary'
             }
         }
     });
@@ -180,6 +227,13 @@ app.get('/', (req, res) => {
             dashboard: {
                 summary: 'GET /api/dashboard/summary (requires token)'
             },
+            insights: {
+                anomalies: 'GET /api/insights/anomalies (requires token)',
+                subscriptions_alerts: 'GET /api/insights/subscriptions/alerts (requires token)',
+                seasonal: 'GET /api/insights/seasonal (requires token)',
+                weekend_weekday: 'GET /api/insights/weekend-weekday (requires token)',
+                summary: 'GET /api/insights/summary (requires token)'
+            },
             utility: {
                 health: 'GET /api/health'
             }
@@ -198,6 +252,10 @@ app.use('*', (req, res) => {
 });
 
 // ==================== START SERVER ====================
+// Initialize Scheduler
+const { initScheduler } = require('./utils/scheduler');
+initScheduler();
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
@@ -231,6 +289,13 @@ app.listen(PORT, () => {
 
     console.log(`\n📊 DASHBOARD:`);
     console.log(`  GET  /api/dashboard/summary   - Dashboard data (requires token)`);
+
+    console.log(`\n🧠 INSIGHTS:`);
+    console.log(`  GET  /api/insights/anomalies            - Unusual spending detection (requires token)`);
+    console.log(`  GET  /api/insights/subscriptions/alerts - Renewal + unused subs (requires token)`);
+    console.log(`  GET  /api/insights/seasonal             - Seasonal patterns (requires token)`);
+    console.log(`  GET  /api/insights/weekend-weekday      - Weekend vs weekday (requires token)`);
+    console.log(`  GET  /api/insights/summary              - All insights combined (requires token)`);
 
     console.log(`\n🔧 UTILITY:`);
     console.log(`  GET  /api/health              - Health check`);

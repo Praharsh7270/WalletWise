@@ -15,7 +15,7 @@ import {
   FaBrain, FaArrowUp, FaArrowDown, FaCalendarAlt,
   FaSync, FaExclamationCircle, FaHome, FaExchangeAlt,
   FaCog, FaChartPie, FaCreditCard, FaFileAlt, FaBell,
-  FaFilter, FaSearch, FaEdit, FaTrash
+  FaFilter, FaSearch
 } from 'react-icons/fa';
 import { Line, Pie, Bar } from 'react-chartjs-2';
 import { toast } from 'react-hot-toast';
@@ -50,6 +50,16 @@ ChartJS.register(
 const Dashboard = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalBalance: 0,
+    spentThisMonth: 0,
+    incomeThisMonth: 0,
+    budgetLeft: 0,
+    savings: 0,
+    monthlyBudget: 0,
+    budgetUsedPercentage: 0,
+    expenseTrend: 0
+  });
   const [error, setError] = useState(null);
   const [timeOfDay, setTimeOfDay] = useState('');
   const [currentDate, setCurrentDate] = useState('');
@@ -86,22 +96,21 @@ const Dashboard = () => {
   const [showSavingsGoalModal, setShowSavingsGoalModal] = useState(false);
 
   // Data states
-  const [stats, setStats] = useState({
-    totalBalance: 0,
-    spentThisMonth: 0,
-    incomeThisMonth: 0,
-    budgetLeft: 0,
-    savings: 0,
-    monthlyBudget: 0,
-    budgetUsedPercentage: 0,
-    expenseTrend: 0
-  });
+  // const [stats, setStats] = useState({
+  //   totalBalance: 0,
+  //   spentThisMonth: 0,
+  //   incomeThisMonth: 0,
+  //   budgetLeft: 0,
+  //   savings: 0,
+  //   monthlyBudget: 0,
+  //   budgetUsedPercentage: 0,
+  //   expenseTrend: 0
+  // });
 
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [categorySpending, setCategorySpending] = useState([]);
   const [weeklyExpenses, setWeeklyExpenses] = useState([]);
   const [savingsGoals, setSavingsGoals] = useState([]);
-  const [transactionToEdit, setTransactionToEdit] = useState(null);
 
   // Navigation items with proper routes
   const navItems = [
@@ -121,10 +130,12 @@ const Dashboard = () => {
           return;
         }
 
-        if (!authUser) {
-          navigate('/login');
-          return;
-        }
+        // if (!authUser) {
+        //   navigate('/login');
+        //   return;
+        // }
+
+
 
         setUser(authUser);
 
@@ -155,10 +166,11 @@ const Dashboard = () => {
 
   // Fetch dashboard data
   const fetchDashboardData = async () => {
+    if (refreshing) return; // Prevent multiple simultaneous refreshes
     setRefreshing(true);
     try {
       console.log('???? Fetching dashboard data...');
-
+      
       const dashboardRes = await api.get('/api/dashboard/summary');
       const dashboardData = dashboardRes.data;
 
@@ -177,6 +189,7 @@ const Dashboard = () => {
           budgetUsedPercentage: statsData.budgetUsedPercentage || 0,
           expenseTrend: dashboardData.expenseTrend || 0
         });
+
 
         // Transactions
         setRecentTransactions(dashboardData.recentTransactions || []);
@@ -237,50 +250,31 @@ const Dashboard = () => {
     return false;
   };
 
-  // Modified to handle BOTH Adding and Editing
-  const handleAddExpense = async (transactionData) => {
+  const handleAddExpense = async (expenseData) => {
     try {
-      let response;
+      console.log('??? Adding expense:', expenseData);
 
-      // LOGIC: If it has an ID, it is an EDIT (PUT). Otherwise, it is a NEW ADD (POST).
-      if (transactionData._id) {
-        console.log('✏️ Updating transaction:', transactionData);
-        response = await api.put(`/api/transactions/${transactionData._id}`, transactionData);
-        toast.success('Transaction updated successfully');
-      } else {
-        console.log('➕ Adding new expense:', transactionData);
-        response = await api.post('/api/transactions', transactionData);
-        toast.success('Expense added successfully');
-      }
+      const response = await api.post('/api/transactions', expenseData);
+
+      console.log('✅ Expense response:', response.data);
 
       if (response.data.success) {
         setShowAddExpenseModal(false);
-        setTransactionToEdit(null); // Clear the edit state
         await fetchDashboardData();
+        toast.success('Expenses added succesfullly.', {
+          style: {
+            background: '#16a34a',
+            color: '#ffffff'
+          },
+          iconTheme: {
+            primary: '#bbf7d0',
+            secondary: '#166534'
+          }
+        });
       }
     } catch (err) {
-      console.error('❌ Failed to save transaction:', err);
-      toast.error(err.response?.data?.message || 'Failed to save transaction');
-    }
-  };
-
-  // === NEW: Handle Edit Click ===
-  const handleEdit = (transaction) => {
-    setTransactionToEdit(transaction); // Load data into state
-    setShowAddExpenseModal(true);      // Open the modal
-  };
-
-  // === NEW: Handle Delete Click ===
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this transaction?')) {
-      try {
-        await api.delete(`/api/transactions/${id}`);
-        toast.success('Transaction deleted successfully');
-        await fetchDashboardData(); // Refresh list
-      } catch (err) {
-        console.error('Error deleting transaction:', err);
-        toast.error('Failed to delete transaction');
-      }
+      console.error('❌ Failed to add expense:', err);
+      alert('Failed to add expense. Please try again.');
     }
   };
 
@@ -602,12 +596,13 @@ const Dashboard = () => {
               <button
                 className={`refresh-btn ${refreshing ? 'refreshing' : ''}`}
                 onClick={fetchDashboardData}
-                title="Refresh dashboard data"
-                aria-label="Refresh data"
                 disabled={refreshing}
+                aria-busy={refreshing}
+                aria-disabled={refreshing}
+                title={refreshing ? 'Refreshing dashboard...' : 'Refresh dashboard data'}
               >
                 <FaSync className={refreshing ? 'spin' : ''} />
-                <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+                <span>{refreshing ? 'Refreshing...' : 'Refresh Data'}</span>
                 {lastUpdated && !refreshing && (
                   <span className="last-updated">Updated {lastUpdated}</span>
                 )}
@@ -627,7 +622,8 @@ const Dashboard = () => {
         </div>
 
         {/* Quick Stats */}
-        <div className="quick-stats">
+        {refreshing && <div className="stats-overlay">Updating...</div>}
+        <div className={`quick-stats ${refreshing ? 'loading' : ''}`}>
           <div className="stat-card">
             <div className="stat-icon blue">
               <FaWallet />
@@ -863,23 +859,6 @@ const Dashboard = () => {
                     {transaction.type === 'expense' ? '-' : '+'}
                     {formatCurrency(transaction.amount)}
                   </div>
-                  {/* === NEW: Action Buttons === */}
-                  <div className="transaction-actions" style={{ display: 'flex', gap: '10px', marginLeft: '15px' }}>
-                    <button
-                      onClick={() => handleEdit(transaction)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6' }}
-                      title="Edit"
-                    >
-                      <FaEdit size={16} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(transaction._id || transaction.id)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }}
-                      title="Delete"
-                    >
-                      <FaTrash size={16} />
-                    </button>
-                  </div>
                 </div>
               ))}
             </div>
@@ -941,12 +920,8 @@ const Dashboard = () => {
       {/* MODALS */}
       <AddExpense
         isOpen={showAddExpenseModal}
-        onClose={() => {
-          setShowAddExpenseModal(false);
-          setTransactionToEdit(null); // Critical: Clear data when closing
-        }}
+        onClose={() => setShowAddExpenseModal(false)}
         onAddExpense={handleAddExpense}
-        transactionToEdit={transactionToEdit} // <--- Pass the data here
       />
 
       <AddIncome

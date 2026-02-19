@@ -7,12 +7,16 @@ const router = express.Router();
 
 const googleOauthEnabled = Boolean(
   process.env.GOOGLE_CLIENT_ID &&
-    process.env.GOOGLE_CLIENT_SECRET &&
-    process.env.GOOGLE_CALLBACK_URL
+  process.env.GOOGLE_CLIENT_SECRET &&
+  process.env.GOOGLE_CALLBACK_URL
 );
 
 if (googleOauthEnabled) {
-  router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'], session: false }));
+  router.get('/google', passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    session: false,
+    state: true
+  }));
 
   router.get(
     '/google/callback',

@@ -10,9 +10,13 @@ import {
   FaChartPie,
   FaBullseye,
   FaChartBar,
-  FaUser
+  FaUser,
+  FaSun,
+  FaMoon,
+  FaCalendarCheck
 } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import './AppNavbar.css';
 
 const navItems = [
@@ -21,11 +25,13 @@ const navItems = [
   { id: 'budget', label: 'Budget', icon: FaChartPie, path: '/budget' },
   { id: 'goals', label: 'Goals', icon: FaBullseye, path: '/goals' },
   { id: 'reports', label: 'Reports', icon: FaChartBar, path: '/reports' },
+  { id: 'subscriptions', label: 'Subscriptions', icon: FaCalendarCheck, path: '/subscriptions' },
   { id: 'settings', label: 'Settings', icon: FaCog, path: '/settings' }
 ];
 
 const AppNavbar = () => {
   const { user, logout } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -102,6 +108,14 @@ const AppNavbar = () => {
 
       <div className="nav-right" ref={userMenuRef}>
         <button
+          className="theme-toggle"
+          onClick={toggleTheme}
+          aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+          type="button"
+        >
+          {isDark ? <FaSun /> : <FaMoon />}
+        </button>
+        <button
           className="user-profile-trigger"
           onClick={() => setShowUserMenu((prev) => !prev)}
           aria-expanded={showUserMenu}
@@ -110,7 +124,11 @@ const AppNavbar = () => {
           type="button"
         >
           <div className="user-avatar" aria-hidden="true">
-            {userInitial}
+            {user?.avatar ? (
+              <img src={user.avatar} alt="" className="avatar-img" />
+            ) : (
+              userInitial
+            )}
           </div>
           <FaChevronDown className={`dropdown-arrow ${showUserMenu ? 'open' : ''}`} />
         </button>
@@ -118,7 +136,13 @@ const AppNavbar = () => {
         {showUserMenu && (
           <div className="user-dropdown-menu" role="menu">
             <div className="user-dropdown-header">
-              <div className="dropdown-avatar">{userInitial}</div>
+              <div className="dropdown-avatar">
+                {user?.avatar ? (
+                  <img src={user.avatar} alt="" className="avatar-img" />
+                ) : (
+                  userInitial
+                )}
+              </div>
               <div className="dropdown-user-info">
                 <span className="dropdown-user-name">{displayName}</span>
                 {displayEmail && <span className="dropdown-user-email">{displayEmail}</span>}

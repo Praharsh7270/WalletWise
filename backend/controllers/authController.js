@@ -33,11 +33,9 @@ const updateProfileSchema = z.object({
   phoneNumber: z.string().trim().optional(),
   department: z.string().trim().optional(),
   year: z.enum(['1st', '2nd', '3rd', '4th', '5th']).optional(),
-  // Profile Settings
   currency: z.string().optional(),
   dateFormat: z.string().optional(),
   language: z.string().optional(),
-  // Financial Settings
   incomeFrequency: z.string().optional(),
   incomeSources: z.string().optional(),
   priorities: z.string().optional(),
@@ -83,11 +81,10 @@ const safeUser = (user) => ({
   provider: user.provider,
   emailVerified: user.emailVerified,
   avatar: user.avatar,
-  // Profile Settings
   currency: user.currency,
   dateFormat: user.dateFormat,
   language: user.language,
-  // Financial Settings
+
   incomeFrequency: user.incomeFrequency,
   incomeSources: user.incomeSources,
   priorities: user.priorities,
@@ -182,7 +179,7 @@ const register = async (req, res) => {
     if (existing) {
       return res.status(400).json({
         success: false,
-        message: 'User already exists with this email or student ID'
+        message: 'Registration failed. Please check your details.'
       });
     }
 
@@ -198,15 +195,25 @@ const register = async (req, res) => {
       emailVerified: false
     });
     await user.setPassword(password);
-    await User.saveWithUniqueStudentId(user);
-    await sendVerificationOtp(user);
+await User.saveWithUniqueStudentId(user);
 
-    return res.status(201).json({
-      success: true,
-      message: 'Registration successful. Please verify your email.',
-      requiresVerification: true,
-      email: user.email
-    });
+// ✅ Skip email verification for local testing
+user.emailVerified = true;
+await user.save();
+
+const accessToken = signAccessToken(user);
+const refreshToken = signRefreshToken(user);
+user.refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+await user.save();
+
+setAuthCookies(res, accessToken, refreshToken);
+
+return res.status(201).json({
+  success: true,
+  message: 'Registration successful',
+  user: safeUser(user)
+});
+
   } catch (error) {
     console.error('Registration error:', error);
     return res.status(500).json({

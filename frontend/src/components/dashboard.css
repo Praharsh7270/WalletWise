@@ -385,6 +385,7 @@
 
 .dashboard-header-left {
   flex: 1;
+  min-width: 0;
 }
 
 .dashboard-title {
@@ -402,6 +403,8 @@
 }
 
 .greeting-text {
+  white-space: normal;       /* allow normal wrapping */
+  overflow-wrap: break-word; /* wrap naturally if needed */
   font-size: 1.5rem;
   font-weight: 600;
   color: var(--text-main);
@@ -487,9 +490,26 @@
   transform: translateY(-2px);
 }
 
-.refresh-btn.refreshing {
-  opacity: 0.7;
+.refresh-btn.refreshing,
+.refresh-btn:disabled {
+  opacity: 0.6;
   cursor: not-allowed;
+  pointer-events: none;
+}
+.refresh-btn.refreshing {
+  animation: pulseRefresh 1.5s ease-in-out infinite;
+}
+
+@keyframes pulseRefresh {
+  0% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(99, 102, 241, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+  }
 }
 
 .spin {
@@ -529,7 +549,7 @@
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: var(--text-muted);
+  color: #475569;   /* darker muted */
   font-weight: 700;
   margin-bottom: 0.5rem;
 }
@@ -538,8 +558,13 @@
   font-size: 2.2rem;
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: var(--text-main);
+  color: #0f172a;   /* strong readable */
   margin: 0.25rem 0;
+}
+
+.stat-trend,
+.progress-text {
+  color: #64748b;   /* accessible secondary */
 }
 
 .progress-container {
@@ -1151,4 +1176,28 @@ textarea:focus {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--brand-primary);
+}
+/* ==========================================================================  
+   12. DASHBOARD REFRESH LOADING STATE  
+   ========================================================================== */
+
+.quick-stats.loading {
+  position: relative;
+  opacity: 0.55;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+/* Subtle overlay effect */
+.quick-stats.loading::after {
+  content: "Updating data...";
+  position: absolute;
+  top: 10px;
+  right: 16px;
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--brand-primary);
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius-sm);
 }
